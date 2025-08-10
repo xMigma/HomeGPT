@@ -1,5 +1,6 @@
-from voice import record_and_transcribe
+from voice import VoiceRecognizer
 
-text = record_and_transcribe()
+recognizer = VoiceRecognizer()
+text = recognizer.record_and_transcribe()
 
 print(f"Transcription: {text}")

@@ -9,14 +9,20 @@ import webrtcvad
 
 class VoiceRecognizer:
     """Voice recognition class using Vosk STT and WebRTC VAD."""
-    
-    def __init__(self, model_path="models/vosk-model-small-es-0.42", 
-                 sample_rate=16000, chunk_ms=20, 
-                 vad_aggressiveness=2, preroll_ms=300,
-                 speech_threshold_ms=250, silence_threshold_ms=700):
+
+    def __init__(
+        self,
+        model_path="models/vosk-model-small-es-0.42",
+        sample_rate=16000,
+        chunk_ms=20,
+        vad_aggressiveness=2,
+        preroll_ms=300,
+        speech_threshold_ms=250,
+        silence_threshold_ms=700,
+    ):
         """
         Initialize voice recognizer.
-        
+
         Args:
             model_path: Path to Vosk model
             sample_rate: Audio sample rate (Hz)
@@ -31,96 +37,81 @@ class VoiceRecognizer:
         self.frame_samples = sample_rate * chunk_ms // 1000
         self.speech_threshold_ms = speech_threshold_ms
         self.silence_threshold_ms = silence_threshold_ms
-        
-        # Initialize Vosk model and recognizer
+
         logging.info(f"Loading Vosk model from {model_path}")
+
         self.model = Model(model_path)
-        self.recognizer = KaldiRecognizer(self.model, sample_rate)
-        
-        # Initialize VAD
         self.vad = webrtcvad.Vad(vad_aggressiveness)
-        
-        # Audio queue and preroll buffer
-        self.audio_q = queue.Queue()
-        preroll_frames_count = preroll_ms // chunk_ms
-        self.preroll_frames = collections.deque(maxlen=preroll_frames_count)
-        
-        # State variables
-        self.in_speech_ms = 0
-        self.silence_ms = 0
-        self.listening = False
-    
+        self.preroll_frames = collections.deque(maxlen=preroll_ms // chunk_ms)
+
     def _audio_callback(self, indata, frames, time, status):
         """Audio input callback - receives exactly frame_samples (20 ms)."""
         if status:
             logging.warning(f"Audio callback status: {status}")
         self.audio_q.put(bytes(indata))
-    
-    def reset_state(self):
-        """Reset recognition state for new recording session."""
-        self.in_speech_ms = 0
-        self.silence_ms = 0
-        self.listening = False
-        self.preroll_frames.clear()
-        # Clear any pending audio data
-        while not self.audio_q.empty():
-            try:
-                self.audio_q.get_nowait()
-            except queue.Empty:
-                break
-        # Reset recognizer
-        self.recognizer = KaldiRecognizer(self.model, self.sample_rate)
-    
+
     def record_and_transcribe(self):
         """
         Record audio until silence and transcribe to text.
-        
+
         Returns:
             str: Transcribed text or empty string if no speech detected
         """
-        self.reset_state()
-        
+        # Initialize state for this recording session
+        in_speech_ms = 0
+        silence_ms = 0
+        listening = False
+        preroll_frames = collections.deque(maxlen=self.preroll_frames.maxlen)
+        recognizer = KaldiRecognizer(self.model, self.sample_rate)
+        audio_q = queue.Queue()
+
+        def callback(indata, frames, time, status):
+            """Audio input callback - receives exactly frame_samples (20 ms)."""
+            if status:
+                logging.warning(f"Audio callback status: {status}")
+            audio_q.put(bytes(indata))
+
         try:
             with sd.RawInputStream(
                 samplerate=self.sample_rate,
                 blocksize=self.frame_samples,
                 dtype="int16",
                 channels=1,
-                callback=self._audio_callback,
+                callback=callback,
             ):
                 logging.info("Started voice recording")
-                
+
                 while True:
-                    frame = self.audio_q.get()
+                    frame = audio_q.get()
                     speech = self.vad.is_speech(frame, self.sample_rate)
 
-                    if not self.listening:
+                    if not listening:
                         # Pre-listening phase: collect frames and wait for speech
-                        self.preroll_frames.append(frame)
-                        self.in_speech_ms += self.chunk_ms if speech else 0
-                        
-                        if self.in_speech_ms >= self.speech_threshold_ms:
+                        preroll_frames.append(frame)
+                        in_speech_ms += self.chunk_ms if speech else 0
+
+                        if in_speech_ms >= self.speech_threshold_ms:
                             logging.info("Speech detected, starting transcription")
-                            self.listening = True
+                            listening = True
                             # Add preroll frames to recognizer
-                            for f in self.preroll_frames:
-                                self.recognizer.AcceptWaveform(f)
+                            for f in preroll_frames:
+                                recognizer.AcceptWaveform(f)
                     else:
                         # Listening phase: transcribe and detect end of speech
-                        self.recognizer.AcceptWaveform(frame)
-                        
+                        recognizer.AcceptWaveform(frame)
+
                         if speech:
-                            self.silence_ms = 0  # Reset silence counter on speech
+                            silence_ms = 0  # Reset silence counter on speech
                         else:
-                            self.silence_ms += self.chunk_ms  # Increment silence counter
-                            
-                            if self.silence_ms >= self.silence_threshold_ms:
+                            silence_ms += self.chunk_ms  # Increment silence counter
+
+                            if silence_ms >= self.silence_threshold_ms:
                                 # End of speech detected
-                                final = json.loads(self.recognizer.FinalResult())
+                                final = json.loads(recognizer.FinalResult())
                                 text = final.get("text", "").strip()
                                 logging.info(f"Transcription complete: '{text}'")
                                 return text
-                                
+
         except Exception as e:
             logging.error(f"Error in voice recognition: {e}")
             return ""
