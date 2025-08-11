@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 import os
 import time
 
+from web_search import make_web_search
+
 
 class VoiceAssistant:
     def __init__(self, config_path: str = "config.env"):
@@ -18,12 +20,11 @@ class VoiceAssistant:
 
         # Configuración
         self.model = (
-            "gpt-5-nano"  # rápido/barato; cambia a gpt-4o si quieres mejor calidad
+            "gpt-4o-mini"
         )
         self.max_tokens = 300
         self.max_turns = 12
 
-        # Historial en memoria (lista de mensajes ChatML)
         self.history = [
             {
                 "role": "system",
@@ -36,8 +37,12 @@ class VoiceAssistant:
 
     def chat(self, user_text: str) -> str:
         """Envía texto al LLM y devuelve la respuesta."""
-        # Añade el turno del usuario
-        self.history.append({"role": "user", "content": user_text})
+
+        web_search = make_web_search(user_text)
+
+        query = f"Pregunta: {user_text}\n\n Información obtenida de la web, úsala si lo crees necesario: {web_search}"
+
+        self.history.append({"role": "user", "content": query})
 
         # Recorta historial si crece demasiado
         if len(self.history) > self.max_turns:
@@ -45,8 +50,7 @@ class VoiceAssistant:
             keep = [self.history[0]] + self.history[-(self.max_turns - 1) :]
             self.history[:] = keep
 
-        # Llama a la API
-        for attempt in range(3):  # pequeños reintentos simples
+        for attempt in range(3):
             try:
                 resp = self.client.chat.completions.create(
                     model=self.model,

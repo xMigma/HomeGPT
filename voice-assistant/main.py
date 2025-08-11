@@ -4,7 +4,7 @@ from assistant import VoiceAssistant
 while True:
     print("Presiona Ctrl+C para detener la grabación.")
     print("Comenzando a grabar...")
-    
+
     recognizer = VoiceRecognizer()
     text = recognizer.record_and_transcribe()
 
