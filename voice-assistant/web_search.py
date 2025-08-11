@@ -50,7 +50,9 @@ def make_web_search(query, max_results=6):
 
     for r in _web_search_full(query, max_results):
         result += f"{r['title']} - {r['href']}\n"
-        result += f"Noticia:\n{(r['full_text'] or 'No se pudo extraer')[:1000]}\n\n"
+        result += (
+            f"Noticia/artículo:\n{(r['full_text'] or 'No se pudo extraer')[:1000]}\n\n"
+        )
 
     return result
 
