@@ -13,11 +13,9 @@ def _fetch_full_text(url):
     return None
 
 
-def _web_search_full(query, max_results=4):
+def _web_search_full(query, max_results):
     with DDGS() as ddgs:
-        results = ddgs.text(
-            query, max_results=max_results // 2, region="es-ES", safesearch="moderate"
-        )
+        results = ddgs.text(query, max_results=max_results // 2, region="es-es")
         text_results = []
         for r in results:
             full_text = _fetch_full_text(r["href"])
@@ -31,9 +29,7 @@ def _web_search_full(query, max_results=4):
             )
 
         # Noticias
-        news = ddgs.news(
-            query, max_results=max_results // 2, region="es-ES", safesearch="moderate"
-        )
+        news = ddgs.news(query, max_results=max_results // 2, region="es-es")
         news_results = []
         for r in news:
             full_text = _fetch_full_text(r["url"])
@@ -48,11 +44,17 @@ def _web_search_full(query, max_results=4):
 
         return text_results + news_results
 
-def make_web_search(query, max_results=4):
+
+def make_web_search(query, max_results=6):
     result = ""
 
-    for r in _web_search_full("Cuando juega el real madrid"):
+    for r in _web_search_full(query, max_results):
         result += f"{r['title']} - {r['href']}\n"
         result += f"Noticia:\n{(r['full_text'] or 'No se pudo extraer')[:1000]}\n\n"
 
     return result
+
+
+if __name__ == "__main__":
+    query = "Cuando es el proximo gran premio de formula 1"
+    print(make_web_search(query))
