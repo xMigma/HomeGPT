@@ -1,5 +1,6 @@
 from voice_recognizer import VoiceRecognizer
 from assistant import VoiceAssistant
+from tts import TTSEngine
 
 while True:
     print("Presiona Ctrl+C para detener la grabación.")
@@ -12,4 +13,8 @@ while True:
 
     assistant = VoiceAssistant()
     response = assistant.chat(text)
-    print(f"Assistant response: {response}")
+
+    print(f"Response: {response}")
+
+    tts = TTSEngine()
+    tts.reproduce(response)
