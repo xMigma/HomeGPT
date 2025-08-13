@@ -1,4 +1,3 @@
-from ddgs import DDGS
 from web_search import WebSearchProvider, fetch_full_text
 
 
@@ -8,7 +7,7 @@ class DuckDuckGoProvider(WebSearchProvider):
     def __init__(self, region: str = "es-es"):
         self.region = region
 
-    def _process_results(self, results, url_key="href"):
+    def _process_results(self, results, url_key):
         """Procesa una lista de resultados y extrae el texto completo de cada URL."""
         processed = []
         for r in results:
