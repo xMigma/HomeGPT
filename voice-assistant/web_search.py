@@ -59,11 +59,3 @@ def fetch_full_text(url):
     except Exception as e:
         print(f"Error fetching {url}: {e}")
     return None
-
-
-if __name__ == "__main__":
-    from ddgs import DuckDuckGoProvider
-
-    query = "Cuando es el proximo gran premio de formula 1"
-    provider = DuckDuckGoProvider()
-    print(make_web_search(query, provider=provider))
