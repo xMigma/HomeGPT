@@ -8,7 +8,7 @@ class WebSearchProvider(ABC):
     """Clase abstracta para proveedores de búsqueda web."""
 
     @abstractmethod
-    def search(self, query: str, max_results: int = 6) -> list:
+    def search(self, query: str, max_results) -> list:
         """
         Realiza una búsqueda web y retorna una lista de resultados.
 
@@ -31,7 +31,7 @@ class WebSearchProvider(ABC):
 
 
 def make_web_search(
-    query: str, max_results: int = 6, provider: WebSearchProvider = None
+    query: str, max_results: int = 3, provider: WebSearchProvider = None
 ) -> str:
     """
     Realiza una búsqueda web usando el proveedor especificado.
@@ -59,3 +59,11 @@ def fetch_full_text(url):
     except Exception as e:
         print(f"Error fetching {url}: {e}")
     return None
+
+
+if __name__ == "__main__":
+    from providers.brave import BraveProvider
+
+    query = "Cuando empieza la liga de futbol?"
+    results = make_web_search(query, provider=BraveProvider())
+    print(results)

@@ -9,7 +9,7 @@ from web_search import WebSearchProvider, fetch_full_text
 
 
 class BraveProvider(WebSearchProvider):
-    """Implementación de búsqueda usando Brave Search API."""
+    """Proveedor de búsqueda Brave (solo resultados WEB, sin noticias)."""
 
     BASE = "https://api.search.brave.com/res/v1"
 
@@ -35,22 +35,15 @@ class BraveProvider(WebSearchProvider):
         self.session = requests.Session()
         self.session.headers.update({"X-Subscription-Token": self.api_key})
 
-    def search(self, query: str, max_results: int = 6) -> List[Dict]:
-        n_web = max_results // 2
-        n_news = max_results - n_web
+    def search(self, query: str, max_results: int) -> List[Dict]:
+        """Realiza búsqueda web y retorna resultados deduplicados.
 
-        items = []
-        items += self._search_web(query, n_web)
-        items += self._search_news(query, n_news)
-
-        seen, deduped = set(), []
-        for it in items:
-            href = it.get("href", "")
-            if href and href not in seen:
-                seen.add(href)
-                deduped.append(it)
-            if len(deduped) >= max_results:
-                break
+        Args:
+            query: texto a buscar
+            max_results: límite de resultados a devolver
+        """
+        items = self._search_web(query, max_results)
+        deduped = self._dedupe(items, max_results)
 
         if self.include_full_text:
             for it in deduped:
@@ -60,6 +53,18 @@ class BraveProvider(WebSearchProvider):
                 it["full_text"] = ""
 
         return deduped
+
+    def _dedupe(self, items: List[Dict], limit: int) -> List[Dict]:
+        """Deduplica por URL y aplica límite."""
+        seen, out = set(), []
+        for it in items:
+            href = it.get("href", "")
+            if href and href not in seen:
+                seen.add(href)
+                out.append(it)
+            if len(out) >= limit:
+                break
+        return out
 
     def _search_web(self, query: str, count: int) -> List[Dict]:
         if count <= 0:
@@ -86,38 +91,6 @@ class BraveProvider(WebSearchProvider):
 
         out = []
         for it in data.get("web", {}).get("results", []):
-            out.append(
-                {
-                    "title": it.get("title", "") or "",
-                    "href": it.get("url", "") or "",
-                    "snippet": it.get("description", "") or "",
-                }
-            )
-        return out
-
-    def _search_news(self, query: str, count: int) -> List[Dict]:
-        if count <= 0:
-            return []
-        try:
-            r = self.session.get(
-                f"{self.BASE}/news/search",
-                params={
-                    "q": query,
-                    "count": count,
-                    "freshness": self.freshness,
-                    "country": self.country,
-                    "lang": self.lang,
-                },
-                timeout=self.timeout,
-            )
-            r.raise_for_status()
-            data = r.json()
-        except Exception as e:
-            logging.warning("Brave news search error: %s", e)
-            return []
-
-        out = []
-        for it in data.get("news", {}).get("results", []):
             out.append(
                 {
                     "title": it.get("title", "") or "",
