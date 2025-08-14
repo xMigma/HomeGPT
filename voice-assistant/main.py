@@ -1,8 +1,11 @@
 from voice_recognizer import VoiceRecognizer
 from assistant import VoiceAssistant
-from tts import TTSEngine
+from tts.openai_tts import OpenAITTS
+from wake_word import WakeWordModel
 
-while True:
+wake_word_model = WakeWordModel()
+
+if wake_word_model.activate():
     print("Presiona Ctrl+C para detener la grabación.")
     print("Comenzando a grabar...")
 
@@ -16,5 +19,5 @@ while True:
 
     print(f"Response: {response}")
 
-    tts = TTSEngine()
+    tts = OpenAITTS()
     tts.reproduce(response)
