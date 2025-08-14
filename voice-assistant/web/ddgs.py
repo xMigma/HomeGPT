@@ -1,4 +1,10 @@
-from web_search import WebSearchProvider, fetch_full_text
+from __future__ import annotations
+
+from typing import List, Dict
+
+from ddgs import DDGS
+
+from .base import WebSearchProvider, fetch_full_text
 
 
 class DuckDuckGoProvider(WebSearchProvider):
@@ -9,7 +15,7 @@ class DuckDuckGoProvider(WebSearchProvider):
 
     def _process_results(self, results, url_key):
         """Procesa una lista de resultados y extrae el texto completo de cada URL."""
-        processed = []
+        processed: List[Dict] = []
         for r in results:
             full_text = fetch_full_text(r[url_key])
             processed.append(
@@ -32,7 +38,6 @@ class DuckDuckGoProvider(WebSearchProvider):
                 query, max_results=max_results // 2, region=self.region
             )
 
-            # Procesar ambos tipos de resultados usando la función auxiliar
             processed_text = self._process_results(text_results, url_key="href")
             processed_news = self._process_results(news_results, url_key="url")
 

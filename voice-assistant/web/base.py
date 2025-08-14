@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import requests
 import trafilatura
@@ -8,7 +11,7 @@ class WebSearchProvider(ABC):
     """Clase abstracta para proveedores de búsqueda web."""
 
     @abstractmethod
-    def search(self, query: str, max_results) -> list:
+    def search(self, query: str, max_results: int) -> list:
         """
         Realiza una búsqueda web y retorna una lista de resultados.
 
@@ -19,7 +22,7 @@ class WebSearchProvider(ABC):
         Returns:
             Lista de diccionarios con keys: title, href, snippet, full_text
         """
-        pass
+        raise NotImplementedError
 
     def format_results(self, results: list) -> str:
         """Formatea los resultados en texto legible."""
@@ -31,7 +34,7 @@ class WebSearchProvider(ABC):
 
 
 def make_web_search(
-    query: str, max_results: int = 3, provider: WebSearchProvider = None
+    query: str, max_results: int = 3, provider: Optional[WebSearchProvider] = None
 ) -> str:
     """
     Realiza una búsqueda web usando el proveedor especificado.
@@ -39,7 +42,7 @@ def make_web_search(
     Args:
         query: Término de búsqueda
         max_results: Número máximo de resultados
-        provider: Proveedor de búsqueda (por defecto DuckDuckGo)
+        provider: Proveedor de búsqueda (requerido)
 
     Returns:
         Resultados formateados como string
@@ -51,19 +54,11 @@ def make_web_search(
     return provider.format_results(results)
 
 
-def fetch_full_text(url):
+def fetch_full_text(url: str) -> Optional[str]:
     try:
         response = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
         if response.status_code == 200:
             return trafilatura.extract(response.text)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Error fetching {url}: {e}")
     return None
-
-
-if __name__ == "__main__":
-    from providers.brave import BraveProvider
-
-    query = "Cuando empieza la liga de futbol?"
-    results = make_web_search(query, provider=BraveProvider())
-    print(results)

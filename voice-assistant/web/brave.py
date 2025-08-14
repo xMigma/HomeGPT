@@ -1,11 +1,12 @@
 # brave_provider.py
 import os
-from dotenv import load_dotenv
 import logging
 from typing import List, Dict, Optional
 
+from dotenv import load_dotenv
 import requests
-from web_search import WebSearchProvider, fetch_full_text
+
+from .base import WebSearchProvider, fetch_full_text
 
 
 class BraveProvider(WebSearchProvider):
