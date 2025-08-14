@@ -3,8 +3,8 @@ from dotenv import load_dotenv
 import os
 import time
 
-from web_search import make_web_search
-from providers.brave import BraveProvider
+from web import make_web_search
+from web import BraveProvider
 
 
 class VoiceAssistant:
