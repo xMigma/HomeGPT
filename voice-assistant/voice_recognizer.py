@@ -53,7 +53,7 @@ class VoiceRecognizer:
             logging.warning(f"Audio callback status: {status}")
         self.audio_q.put(bytes(indata))
 
-    def record_and_transcribe(self):
+    def record_and_transcribe(self) -> str:
         """
         Record audio until silence and transcribe to text.
 
@@ -118,3 +118,10 @@ class VoiceRecognizer:
         except Exception as e:
             logging.error(f"Error in voice recognition: {e}")
             return ""
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    recognizer = VoiceRecognizer()
+    text = recognizer.record_and_transcribe()
+    print(f"Transcription: {text}")
