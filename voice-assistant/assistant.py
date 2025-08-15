@@ -1,5 +1,4 @@
 from openai import OpenAI
-from dotenv import load_dotenv
 import os
 import time
 
@@ -8,8 +7,7 @@ from web import BraveProvider
 
 
 class VoiceAssistant:
-    def __init__(self, config_path: str = "config.env"):
-        load_dotenv(config_path)
+    def __init__(self):
         api_key = os.getenv("OPENAI_API_KEY")
 
         if not api_key:
@@ -83,5 +81,8 @@ class VoiceAssistant:
 
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+
+    load_dotenv("config.env")
     assistant = VoiceAssistant()
     print(assistant.chat("En que equipos ha jugado Cristiano Ronaldo?"))

@@ -1,3 +1,7 @@
+from dotenv import load_dotenv
+
+load_dotenv("config.env")
+
 from voice_recognizer import VoiceRecognizer
 from assistant import VoiceAssistant
 from tts.openai_tts import OpenAITTS
