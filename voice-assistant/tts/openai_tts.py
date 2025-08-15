@@ -7,7 +7,6 @@ import subprocess
 from typing import Optional
 
 import requests
-from dotenv import load_dotenv
 
 from .base import BaseTTS
 
@@ -32,9 +31,6 @@ class OpenAITTS(BaseTTS):
         chunk_size: int = 8192,
         timeout: int = 60,
     ) -> None:
-        # Load env once to support repo's config.env convention
-        load_dotenv("config.env")
-
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.model = model
         self.voice = voice
