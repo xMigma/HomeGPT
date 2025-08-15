@@ -1,46 +1,50 @@
-from openwakeword.model import Model
-
+from collections import deque
 import numpy as np
 import sounddevice as sd
+from openwakeword.model import Model
+
+SAMPLE_RATE = 16000
+FRAME_MS = 80
+FRAME_SAMPLES = SAMPLE_RATE * FRAME_MS // 1000  # 1280
 
 
 class WakeWordModel:
     def __init__(
         self,
         model_path: str = "models/openwakeword/alexa_v0.1.tflite",
-        threshold: float = 0.3,
+        threshold: float = 0.5,
     ):
         self.model = Model(
             wakeword_models=[model_path],
         )
         self.threshold = threshold
+        self.buf = deque(maxlen=1)  # guarda el último frame capturado
 
-    def _my_function_to_get_audio_frame(
-        self, frame_ms: int = 80, samplerate: int = 16000
-    ) -> np.ndarray:
-        """Capture a single audio frame as 16-bit PCM mono at 16kHz.
-
-        Returns a 1D numpy.ndarray with dtype=np.int16 and length N (multiple of 1280 for 80ms).
-        """
-        samples = int(samplerate * frame_ms / 1000)
-        audio = sd.rec(
-            samples,
-            samplerate=samplerate,
-            channels=1,
-            dtype="int16",  # 16-bit PCM
-            blocking=True,
-        )
-        return audio.reshape(-1)  # 1D int16b
+    def _callback(self, indata, frames, time, status):
+        if status:
+            print(status)
+        # Convierte de float32 [-1,1] a int16 PCM
+        pcm = np.clip(indata[:, 0], -1.0, 1.0)
+        pcm = (pcm * 32767.0).astype(np.int16)
+        self.buf.append(pcm)
 
     def activate(self) -> bool:
-        while True:
-            frame = self._my_function_to_get_audio_frame()
-            prediction = self.model.predict(frame)
-            # Print compact scores
-            if prediction:
-                # Show first (and usually only) model score
-                name, score = next(iter(prediction.items()))
-                print(f"{name}: {score:.3f}", end="\r", flush=True)
-                if score >= self.threshold:
-                    print(f"\nWake word detected: {name} (score={score:.3f})")
-                    return True
+        with sd.InputStream(
+            samplerate=SAMPLE_RATE,
+            channels=1,
+            blocksize=FRAME_SAMPLES,
+            dtype="float32",
+            callback=self._callback,
+        ):
+            while True:
+                if not self.buf:
+                    sd.sleep(1)
+                    continue
+                frame = self.buf.popleft()
+                prediction = self.model.predict(frame)
+                if prediction:
+                    name, score = next(iter(prediction.items()))
+                    print(f"{name}: {score:.3f}", end="\r", flush=True)
+                    if score >= self.threshold:
+                        print(f"\nWake word detected: {name} (score={score:.3f})")
+                        return True
