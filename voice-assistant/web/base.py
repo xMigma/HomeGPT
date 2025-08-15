@@ -34,7 +34,7 @@ class WebSearchProvider(ABC):
 
 
 def make_web_search(
-    query: str, max_results: int = 3, provider: Optional[WebSearchProvider] = None
+    query: str, max_results: int = 2, provider: Optional[WebSearchProvider] = None
 ) -> str:
     """
     Realiza una búsqueda web usando el proveedor especificado.
@@ -56,7 +56,7 @@ def make_web_search(
 
 def fetch_full_text(url: str) -> Optional[str]:
     try:
-        response = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+        response = requests.get(url, timeout=3, headers={"User-Agent": "Mozilla/5.0"})
         if response.status_code == 200:
             return trafilatura.extract(response.text)
     except Exception as e:  # noqa: BLE001
