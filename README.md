@@ -1,147 +1,128 @@
-# HomeGPT – Lightweight Voice Assistant (Raspberry Pi–ready)
+# HomeGPT – Asistente de Voz en Español
 
-HomeGPT is a small, offline‑first Spanish voice assistant designed to run on low‑power boards like Raspberry Pi Zero / Zero 2 W.
+Asistente de voz simple que escucha, transcribe, consulta a ChatGPT y responde con voz.
 
-It listens for speech, detects voice activity (VAD), transcribes locally with Vosk, sends the text to a remote LLM (OpenAI), synthesizes speech with Piper, and plays it back—looping for the next turn.
+## ¿Qué hace?
 
+1. **Detecta una palabra de activación** ("Alexa" con OpenWakeWord)
+2. **Graba tu voz** hasta que haya silencio (WebRTC VAD)
+3. **Transcribe** el audio localmente con Vosk (español)
+4. **Envía el texto** a OpenAI (GPT) con contexto web opcional (Brave Search)
+5. **Responde con voz** usando OpenAI TTS
 
-## Features
+## Estado actual
 
-- Offline speech‑to‑text (STT) with Vosk small Spanish model
-- Low‑latency voice activity detection (WebRTC VAD)
-- Natural TTS using Piper (local, fast) and ALSA `aplay`
-- LLM integration via OpenAI API (concise Spanish replies)
-- Optional web context via Brave Search API + content extraction (Trafilatura)
-- 16 kHz mono audio pipeline tuned for low resources
+**Implementado:**
+- Detección de palabra de activación (wake word)
+- Grabación con detección de actividad de voz (VAD)
+- Transcripción offline en español (Vosk)
+- Integración con OpenAI (chat + TTS)
+- Búsqueda web opcional (Brave API)
 
+**Próximamente:**
+- Optimización para Raspberry Pi Zero / Zero 2 W
+- TTS local con Piper (alternativa offline)
+- Modo de conversación continua
 
-## How it works
+## Instalación rápida
 
-1. Capture mic audio at 16 kHz and segment with WebRTC VAD until silence.
-2. Transcribe locally using Vosk.
-3. Call the LLM with a short system prompt and optional web snippets.
-4. Synthesize the response with Piper and play via `aplay`.
-5. Repeat.
-
-Code entrypoint: `voice-assistant/main.py`.
-
-
-## Repository layout
-
-```
-HomeGPT/
-├── models/
-│   ├── piper/
-│   │   ├── xx_XX-mls_10246-low.onnx
-│   │   └── xx_XX-mls_10246-low.onnx.json
-│   └── vosk-model-small-xx-0.42/    # Vosk small model
-└── voice-assistant/
-    ├── main.py                      # Loop: STT -> LLM -> TTS
-    ├── assistant.py                 # OpenAI client + web context
-    ├── voice_recognizer.py          # VAD + Vosk transcription
-    ├── tts.py                       # Piper synth + aplay output
-    ├── web_search.py                # Provider interface + formatting
-    └── providers/
-        ├── brave.py                 # Brave Search API provider
-        └── ddgs.py                  # DuckDuckGo (optional)
-```
-
-
-## Requirements
-
-- Python 3.9+
-- Linux with ALSA (for `aplay`)
-- Microphone and speaker/headphones configured as default ALSA/Pulse devices
-
-System packages (Debian/Raspberry Pi OS suggested):
-
-- `alsa-utils` (for `aplay`)
-- `portaudio19-dev` (recommended for sounddevice)
-- `build-essential` (general build tools)
-
-Python packages:
-
-- `sounddevice`, `vosk`, `webrtcvad`
-- `openai`, `python-dotenv`
-- `requests`, `trafilatura`
-- `piper-tts`
-- Optional: `duckduckgo-search` (for `providers/ddgs.py`)
-
-
-## Setup
-
-1) Create and activate a virtual environment
+1. **Clona el repositorio y crea el entorno virtual:**
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-python -m pip install --upgrade pip
+git clone https://github.com/xMigma/HomeGPT.git
+cd HomeGPT
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-2) Install Python dependencies
+2. **Instala las dependencias:**
 
 ```bash
-pip install sounddevice vosk webrtcvad openai python-dotenv requests trafilatura piper-tts duckduckgo-search
+pip install -r requirements.txt
 ```
 
-3) Ensure system audio tools are available
+3. **Descarga los modelos necesarios:**
 
+**Vosk (Transcripción en español):**
 ```bash
-sudo apt-get update
-sudo apt-get install -y alsa-utils portaudio19-dev
+wget https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip
+unzip vosk-model-small-es-0.42.zip -d models/
 ```
 
-4) Place the models (already included here)
-
-- Vosk: `models/vosk-model-small-es-0.42`
-- Piper: `models/piper/es_ES-mls_10246-low.onnx` and its `.json`
-
-5) Provide API keys in `config.env`
-
-```
-OPENAI_API_KEY=sk-...            # required for LLM replies
-BRAVE_API_KEY=...                # optional (web snippets); safe to omit
+**OpenWakeWord (Palabra de activación):**
+```bash
+mkdir -p models/openwakeword
+wget https://github.com/dscripka/openWakeWord/releases/download/v0.1.0/alexa_v0.1.tflite -O models/openwakeword/alexa_v0.1.tflite
 ```
 
-If `BRAVE_API_KEY` is missing, the assistant will skip web context.
+**Piper (TTS local - opcional):**
+```bash
+mkdir -p models/piper
+wget https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES/mls_10246/low/es_ES-mls_10246-low.onnx -O models/piper/es_ES-mls_10246-low.onnx
+wget https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES/mls_10246/low/es_ES-mls_10246-low.onnx.json -O models/piper/es_ES-mls_10246-low.onnx.json
+```
 
+4. **Configura tus claves API en `config.env`:**
 
-## Usage
+```env
+OPENAI_API_KEY=sk-...           # Obligatorio
+BRAVE_API_KEY=...               # Opcional
+```
 
-- Connect mic and speakers, then run:
+5. **Ejecuta el asistente:**
 
 ```bash
 python voice-assistant/main.py
 ```
 
-- Speak after “Comenzando a grabar…”. The app stops recording on silence, prints the transcript, calls the LLM, then speaks the reply. Press Ctrl+C to stop.
+Di "Alexa" y luego tu pregunta. El asistente responderá con voz.
 
-Notes
-- Default audio device is used. If you have multiple devices, configure ALSA/Pulse defaults or set a device in `sounddevice`.
-- This loop does not include a wake word yet; it records on demand and ends on silence.
+## Estructura del proyecto
 
+```
+HomeGPT/
+├── voice-assistant/
+│   ├── main.py                  # Punto de entrada
+│   ├── wake_word.py             # Detección de palabra de activación
+│   ├── voice_recognizer.py      # Grabación + VAD + Vosk
+│   ├── assistant.py             # OpenAI + búsqueda web
+│   ├── tts/                     # Síntesis de voz
+│   │   ├── openai_tts.py        # OpenAI TTS (actual)
+│   │   └── piper.py             # Piper TTS (futuro)
+│   └── web/                     # Proveedores de búsqueda
+│       ├── brave.py
+│       └── ddgs.py
+└── models/                      # Modelos offline
+    ├── vosk-model-small-es-0.42/
+    ├── piper/
+    └── openwakeword/
+```
 
-## Configuration knobs (code)
+## Requisitos
 
-`voice_recognizer.py`
-- `sample_rate`: 16000
-- `chunk_ms`: 20 (WebRTC VAD supported frame size)
-- `vad_aggressiveness`: 0–3 (default 2)
-- `speech_threshold_ms`: minimum speech onset (default 250 ms)
-- `silence_threshold_ms`: end of utterance (default 700 ms)
+- **Python 3.9+**
+- **Micrófono y altavoces** configurados como dispositivos por defecto
+- **Linux recomendado** (probado en Ubuntu/Debian)
 
-`assistant.py`
-- Model: `gpt-5-nano` (adjust per your OpenAI account/models)
-- Max tokens/turns, basic retry with backoff
-- Optional Brave web context (summaries via Trafilatura)
+### Paquetes del sistema (opcional):
 
-`tts.py`
-- Piper model paths and playback via `aplay` at detected sample rate
+```bash
+sudo apt-get install portaudio19-dev ffmpeg
+```
 
+## Configuración avanzada
 
-## Performance tips for Raspberry Pi Zero / Zero 2 W
+Puedes ajustar parámetros en el código:
 
-- Keep sample rate at 16 kHz mono.
-- Use the Vosk “small” model (already included).
-- Prefer the Piper “low” voice (already included).
-- Increase `vad_aggressiveness` to reduce false positives in noisy rooms.
+**`voice_recognizer.py`:**
+- `vad_aggressiveness`: 0-3 (sensibilidad del VAD)
+- `speech_threshold_ms`: milisegundos mínimos de voz
+- `silence_threshold_ms`: silencio para terminar grabación
+
+**`assistant.py`:**
+- `model`: modelo de OpenAI a usar
+- `max_tokens`: límite de respuesta
+
+## Licencia
+
+MIT
