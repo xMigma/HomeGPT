@@ -11,12 +11,13 @@ FRAME_SAMPLES = SAMPLE_RATE * FRAME_MS // 1000  # 1280
 class WakeWordModel:
     def __init__(
         self,
-        model_path: str = "models/openwakeword/alexa_v0.1.tflite",
+        wakeword_model_paths: list[str] | None = None,
         threshold: float = 0.5,
     ):
-        self.model = Model(
-            wakeword_models=[model_path],
-        )
+        if wakeword_model_paths:
+            self.model = Model(wakeword_model_paths=wakeword_model_paths)
+        else:
+            self.model = Model()
         self.threshold = threshold
         self.buf = deque(maxlen=1)  # guarda el último frame capturado
 
