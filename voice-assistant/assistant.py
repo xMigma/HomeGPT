@@ -31,7 +31,7 @@ class VoiceAssistant:
             ),
         }
 
-    def chat(self, user_text: str):
+    def chat(self, user_text: str) -> str:
         """Envía texto al LLM y devuelve la respuesta."""
 
         query = (
@@ -60,6 +60,8 @@ class VoiceAssistant:
                 if attempt == 2:
                     return f"Error de conexión: {str(e)}"
                 time.sleep(0.6 * (attempt + 1))
+                
+        return "Lo siento, ocurrió un error inesperado."
 
     def _clean_response(self, text: str) -> str:
         """Elimina enlaces markdown y limpia el formato para voz."""
