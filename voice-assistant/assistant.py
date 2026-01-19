@@ -17,7 +17,7 @@ class VoiceAssistant:
 
         # Configuración
         self.model = "gpt-5-search-api"
-        self.max_tokens = 10000
+        self.max_tokens = 500
 
         self.system_message = {
             "role": "system",
