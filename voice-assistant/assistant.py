@@ -1,5 +1,6 @@
 from openai import OpenAI
 import os
+import re
 import time
 
 
@@ -33,9 +34,8 @@ class VoiceAssistant:
         """Envía texto al LLM y devuelve la respuesta."""
 
         query = (
-            f"Pregunta del usuario: {user_text}\n\n"
-            "Responde en español, máximo 3 frases, sin jerga técnica. "
-            "Si usas datos de la web, indícalo con un 'Según X' o 'Fuentes web' sin enlaces largos."
+            f"{user_text}\n\n"
+            "Recuerda: respuesta breve, sin URLs ni enlaces, menciona fuentes de forma natural."
         )
 
         self.history.append({"role": "user", "content": query})
@@ -53,14 +53,28 @@ class VoiceAssistant:
                 )
                 answer = (resp.choices[0].message.content or "").strip()
                 if answer:
+                    answer = self._clean_response(answer)
                     self.history.append({"role": "assistant", "content": answer})
                     return answer
                 return "Lo siento, no pude generar una respuesta."
             except Exception as e:
-                # opcional: log de e
                 if attempt == 2:
                     return f"Error de conexión: {str(e)}"
-                time.sleep(0.6 * (attempt + 1))  # backoff básico
+                time.sleep(0.6 * (attempt + 1))
+
+    def _clean_response(self, text: str) -> str:
+        """Elimina enlaces markdown y limpia el formato para voz."""
+        # ([texto](url)) -> según texto
+        text = re.sub(r'\(\[([^\]]+)\]\([^)]+\)\)', r'según \1', text)
+        # [texto](url) -> texto
+        text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+        # URLs sueltas
+        text = re.sub(r'https?://\S+', '', text)
+        # Doble "según según"
+        text = re.sub(r'según\s+según', 'según', text)
+        # Espacios múltiples
+        text = re.sub(r'\s+', ' ', text).strip()
+        return text
 
     def clear_history(self):
         """Limpia el historial manteniendo solo el mensaje del sistema."""
