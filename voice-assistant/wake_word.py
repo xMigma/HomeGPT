@@ -32,7 +32,13 @@ class WakeWordModel:
         pcm = (pcm * 32767.0).astype(np.int16)
         self.buf.append(pcm)
 
+    def reset(self):
+        """Resetea el estado interno del modelo para evitar falsos positivos."""
+        self.model.reset()
+        self.buf.clear()
+
     def activate(self) -> bool:
+        self.reset()
         with sd.InputStream(
             samplerate=SAMPLE_RATE,
             channels=1,
