@@ -1,7 +1,10 @@
 from collections import deque
+import logging
 import numpy as np
 import sounddevice as sd
 from openwakeword.model import Model
+
+logger = logging.getLogger(__name__)
 
 SAMPLE_RATE = 16000
 FRAME_MS = 80
@@ -23,7 +26,7 @@ class WakeWordModel:
 
     def _callback(self, indata, frames, time, status):
         if status:
-            print(status)
+            logger.warning(status)
         # Convierte de float32 [-1,1] a int16 PCM
         pcm = np.clip(indata[:, 0], -1.0, 1.0)
         pcm = (pcm * 32767.0).astype(np.int16)
@@ -45,7 +48,7 @@ class WakeWordModel:
                 prediction = self.model.predict(frame)
                 if prediction:
                     name, score = next(iter(prediction.items()))
-                    print(f"{name}: {score:.3f}", end="\r", flush=True)
+                    logger.debug(f"{name}: {score:.3f}")
                     if score >= self.threshold:
-                        print(f"\nWake word detected: {name} (score={score:.3f})")
+                        logger.info(f"Wake word detected: {name} (score={score:.3f})")
                         return True

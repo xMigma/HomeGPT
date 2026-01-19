@@ -1,10 +1,13 @@
-import sounddevice as sd
-import queue
-import json
 import collections
+import json
 import logging
-from vosk import Model, KaldiRecognizer, SetLogLevel
+import queue
+
+import sounddevice as sd
 import webrtcvad
+from vosk import Model, KaldiRecognizer, SetLogLevel
+
+logger = logging.getLogger(__name__)
 
 # Silenciar los logs de Vosk
 SetLogLevel(-1)
@@ -41,7 +44,7 @@ class VoiceRecognizer:
         self.speech_threshold_ms = speech_threshold_ms
         self.silence_threshold_ms = silence_threshold_ms
 
-        logging.info(f"Loading Vosk model from {model_path}")
+        logger.info(f"Loading Vosk model from {model_path}")
 
         self.model = Model(model_path)
         self.vad = webrtcvad.Vad(vad_aggressiveness)
@@ -50,7 +53,7 @@ class VoiceRecognizer:
     def _audio_callback(self, indata, frames, time, status):
         """Audio input callback - receives exactly frame_samples (20 ms)."""
         if status:
-            logging.warning(f"Audio callback status: {status}")
+            logger.warning(f"Audio callback status: {status}")
         self.audio_q.put(bytes(indata))
 
     def record_and_transcribe(self) -> str:
@@ -71,7 +74,7 @@ class VoiceRecognizer:
         def callback(indata, frames, time, status):
             """Audio input callback - receives exactly frame_samples (20 ms)."""
             if status:
-                logging.warning(f"Audio callback status: {status}")
+                logger.warning(f"Audio callback status: {status}")
             audio_q.put(bytes(indata))
 
         try:
@@ -82,7 +85,7 @@ class VoiceRecognizer:
                 channels=1,
                 callback=callback,
             ):
-                logging.info("Started voice recording")
+                logger.info("Started voice recording")
 
                 while True:
                     frame = audio_q.get()
@@ -94,7 +97,7 @@ class VoiceRecognizer:
                         in_speech_ms += self.chunk_ms if speech else 0
 
                         if in_speech_ms >= self.speech_threshold_ms:
-                            logging.info("Speech detected, starting transcription")
+                            logger.info("Speech detected, starting transcription")
                             listening = True
                             # Add preroll frames to recognizer
                             for f in preroll_frames:
@@ -112,11 +115,11 @@ class VoiceRecognizer:
                                 # End of speech detected
                                 final = json.loads(recognizer.FinalResult())
                                 text = final.get("text", "").strip()
-                                logging.info(f"Transcription complete: '{text}'")
+                                logger.info(f"Transcription complete: '{text}'")
                                 return text
 
         except Exception as e:
-            logging.error(f"Error in voice recognition: {e}")
+            logger.error(f"Error in voice recognition: {e}")
             return ""
 
 
@@ -124,4 +127,4 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     recognizer = VoiceRecognizer()
     text = recognizer.record_and_transcribe()
-    print(f"Transcription: {text}")
+    logger.info(f"Transcription: {text}")

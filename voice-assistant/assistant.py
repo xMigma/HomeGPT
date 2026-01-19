@@ -1,7 +1,11 @@
-from openai import OpenAI
+import logging
 import os
 import re
 import time
+
+from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 
 class VoiceAssistant:
@@ -75,6 +79,7 @@ class VoiceAssistant:
 if __name__ == "__main__":
     from dotenv import load_dotenv
 
+    logging.basicConfig(level=logging.INFO)
     load_dotenv("config.env")
     assistant = VoiceAssistant()
-    print(assistant.chat("Cuando juega el real madrid?"))
+    logger.info(assistant.chat("Cuando juega el real madrid?"))
